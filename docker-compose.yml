@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  alsek-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alsek-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    labels:
+      # ── Traefik routing ──────────────────────────────────────────
+      - "traefik.enable=true"
+      - "traefik.docker.network=audit-app_web"
+
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.alsek-http.rule=Host(`alsek.fr`) || Host(`www.alsek.fr`)"
+      - "traefik.http.routers.alsek-http.entrypoints=web"
+      - "traefik.http.routers.alsek-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+
+      # HTTPS router
+      - "traefik.http.routers.alsek.rule=Host(`alsek.fr`) || Host(`www.alsek.fr`)"
+      - "traefik.http.routers.alsek.entrypoints=websecure"
+      - "traefik.http.routers.alsek.tls=true"
+      - "traefik.http.routers.alsek.tls.certresolver=letsencrypt"
+
+      # WWW → apex redirect middleware
+      - "traefik.http.routers.alsek.middlewares=www-to-apex,security-headers"
+      - "traefik.http.middlewares.www-to-apex.redirectregex.regex=^https://www\\.alsek\\.fr(.*)"
+      - "traefik.http.middlewares.www-to-apex.redirectregex.replacement=https://alsek.fr$${1}"
+      - "traefik.http.middlewares.www-to-apex.redirectregex.permanent=true"
+
+      # Security headers
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.security-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+
+      # Service port
+      - "traefik.http.services.alsek.loadbalancer.server.port=3000"
+
+    networks:
+      - audit-app_web
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  audit-app_web:
+    external: true
