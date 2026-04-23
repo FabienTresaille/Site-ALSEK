@@ -16,15 +16,15 @@ export async function POST(request) {
     // ── Option A : Resend ─────────────────────────────────────────
     // Décommentez si vous utilisez Resend (npm install resend)
     //
-    // const { Resend } = await import('resend');
-    // const resend = new Resend(process.env.RESEND_API_KEY);
-    //
-    // await resend.emails.send({
-    //   from: 'Alsek Website <no-reply@alsek.fr>',
-    //   to: [process.env.CONTACT_EMAIL_TO || 'contact@alsek.fr'],
-    //   subject: `[Alsek] Nouvel audit demandé — ${prenom} ${nom}`,
-    //   html: buildEmailHtml({ nom, prenom, email, site, message, besoins, budget }),
-    // });
+     const { Resend } = await import('resend');
+     const resend = new Resend(process.env.RESEND_API_KEY);
+    
+     await resend.emails.send({
+       from: 'Alsek Marketing <contact@alsek.fr>',
+       to: [process.env.CONTACT_EMAIL_TO || 'contact@alsek.fr'],
+       subject: `[Alsek] Nouvel audit demandé — ${prenom} ${nom}`,
+       html: buildEmailHtml({ nom, prenom, email, site, message, besoins, budget }),
+     });
 
     // ── Option B : Nodemailer SMTP ────────────────────────────────
     // Décommentez si vous préférez SMTP (npm install nodemailer)
